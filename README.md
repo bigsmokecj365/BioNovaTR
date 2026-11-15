@@ -14,7 +14,7 @@
 | | Link |
 |---|---|
 | Slide deck (English, 7 slides) | [docs/BioNova_Pitch_EN.pdf](docs/BioNova_Pitch_EN.pdf) · [.pptx](docs/BioNova_Pitch_EN.pptx) |
-| Video (28.9 s) | [medya/BioNova_teaser.mp4](medya/BioNova_teaser.mp4) |
+| Video (28.9 s, English voice-over + English subtitles) | [medya/BioNova_teaser.mp4](medya/BioNova_teaser.mp4) · [subtitles .srt](medya/BioNova_teaser_EN.srt) |
 | Dashboard (single file, offline) | [BioNova_Panel.html](BioNova_Panel.html): download it and open it in Chrome or Edge |
 | Turkish deck (local jury) | [docs/BioNova_Sunum_TR.pdf](docs/BioNova_Sunum_TR.pdf) · [.pptx](docs/BioNova_Sunum_TR.pptx) |
 
