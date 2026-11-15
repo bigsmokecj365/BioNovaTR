@@ -34,6 +34,27 @@ float pitch = 0, roll = 0, yaw = 0, gbx = 0, gby = 0, gbz = 0, dynEma = 0, ax = 
 uint32_t steps = 0, lastStep = 0, stepT[32]; uint8_t stepI = 0;
 uint32_t stillMs = 0, fallUntil = 0;
 
+/* ---------- Mahony yön filtresi: kart nasıl takılırsa takılsın gerçek 3B yön (kuaterniyon) ---------- */
+float qw = 1, qx = 0, qy = 0, qz = 0;
+void qFromAccel(float x, float y, float z) {       // açılışta yerçekimine göre başlangıç yönü
+  float r = atan2f(y, z) * 0.5f, p = atan2f(-x, sqrtf(y * y + z * z)) * 0.5f;
+  float cr = cosf(r), sr = sinf(r), cp = cosf(p), sp = sinf(p);
+  qw = cr * cp; qx = sr * cp; qy = cr * sp; qz = -sr * sp;
+}
+void mahony(float gx, float gy, float gz, float x, float y, float z, float dt) {   // g: rad/s, a: g
+  const float KP = 1.2f;                           // ivmeyle düzeltme gücü (yüksek = sert, düşük = kayar)
+  float n = sqrtf(x * x + y * y + z * z);
+  if (n > 0.85f && n < 1.15f) {                    // sadece sakin anlarda yerçekimine güven: darbe/sarsıntı yönü bozmaz
+    x /= n; y /= n; z /= n;
+    float vx = 2 * (qx * qz - qw * qy), vy = 2 * (qw * qx + qy * qz), vz = qw * qw - qx * qx - qy * qy + qz * qz;
+    gx += KP * (y * vz - z * vy); gy += KP * (z * vx - x * vz); gz += KP * (x * vy - y * vx);
+  }
+  gx *= 0.5f * dt; gy *= 0.5f * dt; gz *= 0.5f * dt;
+  float a = qw, b = qx, c = qy;
+  qw += -b * gx - c * gy - qz * gz; qx += a * gx + c * gz - qz * gy; qy += a * gy - b * gz + qz * gx; qz += a * gz + b * gy - c * gx;
+  n = sqrtf(qw * qw + qx * qx + qy * qy + qz * qz); qw /= n; qx /= n; qy /= n; qz /= n;
+}
+
 void mpuWrite(uint8_t r, uint8_t v) { Wire.beginTransmission(MPU); Wire.write(r); Wire.write(v); Wire.endTransmission(); }
 bool mpuRead(float& x, float& y, float& z, float& gx, float& gy, float& gz) {
   Wire.beginTransmission(MPU); Wire.write(0x3B); if (Wire.endTransmission(false) != 0) return false;
@@ -56,7 +77,7 @@ bool mpuInit() {
   if (n) { gbx = sx / n; gby = sy / n; gbz = sz / n; }
   yaw = 0;
   if (mpuRead(x, y, z, gx, gy, gz)) {               // başlangıç eğimi ve 1 g tabanı
-    mBase = sqrtf(x * x + y * y + z * z);
+    mBase = sqrtf(x * x + y * y + z * z); qFromAccel(x, y, z);
     pitch = atan2f(-x, sqrtf(y * y + z * z)) * 57.2958f; roll = atan2f(y, z) * 57.2958f;
   }
   return true;
@@ -69,6 +90,7 @@ void imuStep(float dt) {
   roll  = 0.98f * (roll + gx * dt) + 0.02f * aR;
   if (fabsf(gz) > 0.6f) yaw += gz * dt;              // dönüş (pusula yok: zamanla az kayabilir)
   if (yaw > 180) yaw -= 360; else if (yaw < -180) yaw += 360;
+  mahony(gx * 0.0174533f, gy * 0.0174533f, gz * 0.0174533f, ax, ay, az, dt);
   float m = sqrtf(ax * ax + ay * ay + az * az);
   mBase = mBase * 0.99875f + m * 0.00125f;          // yavaş taban: sensör 0,96 g da ölçse 0 hareket sayılır
   float dyn = fabsf(m - mBase);
@@ -87,9 +109,9 @@ void out(const char* s) { ws.broadcastTXT(s); if (usbJson && Serial) Serial.prin
 void sendImu() {
   int in = constrain((int)(dynEma * 250), 0, 100), sp = spm(), still = stillMs / 1000;
   const char* act = sp > 120 ? "kosu" : in > 25 ? "gecis" : still > 20 ? "hareketsiz" : in < 3 ? "dinlenme" : "istasyon";
-  char b[260];
-  snprintf(b, sizeof b, "{\"type\":\"imu\",\"p\":%.1f,\"r\":%.1f,\"y\":%.1f,\"int\":%d,\"spm\":%d,\"st\":%lu,\"still\":%d,\"act\":\"%s\",\"fall\":%d,\"a\":[%.2f,%.2f,%.2f]}",
-           pitch, roll, yaw, in, sp, (unsigned long)steps, still, act, millis() < fallUntil ? 1 : 0, ax, ay, az);
+  char b[340];
+  snprintf(b, sizeof b, "{\"type\":\"imu\",\"p\":%.1f,\"r\":%.1f,\"y\":%.1f,\"q\":[%.4f,%.4f,%.4f,%.4f],\"int\":%d,\"spm\":%d,\"st\":%lu,\"still\":%d,\"act\":\"%s\",\"fall\":%d,\"a\":[%.2f,%.2f,%.2f]}",
+           pitch, roll, yaw, qw, qx, qy, qz, in, sp, (unsigned long)steps, still, act, millis() < fallUntil ? 1 : 0, ax, ay, az);
   out(b);
 }
 

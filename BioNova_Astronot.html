@@ -5072,7 +5072,7 @@ function espConnect(ip){
 function onVit(d){LIVE.at=performance.now();LIVE.hr=+d.hr||0;{const h=+d.hrv||0;LIVE.hrv=h>=5&&h<=250?h:0;}LIVE.nrr=+d.nrr||0;LIVE.off=!!d.off;LIVE.inv=!!d.inv;LIVE.phr=+d.phr||0;LIVE.sok=d.sok==null?-1:+d.sok;LIVE.spo2=+d.spo2||0;LIVE.temp=+d.temp||0;LIVE.ex=d.ex==null?-1:+d.ex;LIVE.bat=d.bat==null?-1:+d.bat;LIVE.bv=+d.bv||0;if(d.vb)LIVE.bv=(+d.vb||0)/1000;if(d.mok){const ac=+d.act||0,pv=LIVE.mo;LIVE.imuAt=performance.now();LIVE.mo={p:+d.pit||0,r:+d.rol||0,int:ac,spm:0,st:pv?pv.st:0,still:ac<3?((pv&&pv.still)||0)+1:0,act:+d.ex?'kosu':'istasyon',fall:+d.fall||0};if(Array.isArray(d.acc)){d.acc.slice(0,20).forEach(x=>LIVE.imuQ.push(x.slice(0,3).map(Number)));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}}
   espStatus(LIVE.off?('ESP32 bağlı ama EKG elektrotlarından biri temas etmiyor.'+(LIVE.phr?' Nabız parmak sensöründen: '+LIVE.phr+' atım/dk.':'')):'Canlı: EKG '+(LIVE.hr||'--')+' · HW-605 '+(LIVE.sok===2?(LIVE.phr||'--')+' atım, SpO₂ '+(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'hesaplanıyor'):LIVE.sok===1?'temas yok':LIVE.sok===0?'takılı değil':'--')+' · sıcaklık '+(LIVE.temp?LIVE.temp.toFixed(1)+' °C':'--')+' · egzersiz '+(LIVE.ex===1?'açık':'kapalı')+' · pil '+(LIVE.bat>=0?'%'+LIVE.bat+' ('+LIVE.bv.toFixed(2)+' V)':'USB')+' · hareket '+(performance.now()-LIVE.imuAt<2000&&LIVE.mo?LIVE.mo.act+' %'+LIVE.mo.int:'--')+' || EKG nabzı '+(LIVE.hr||'--')+' atım/dk · parmak nabzı '+(LIVE.phr||'--')+' · '+LIVE.nrr+' R-R aralığı · '+LIVE.frames+' EKG paketi');paintEsp();}
 function onImu(d){LIVE.imuAt=performance.now();
-  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
+  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,q:Array.isArray(d.q)&&d.q.length===4?d.q.map(Number):null,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
   if(Array.isArray(d.a))LIVE.imuQ.push(d.a.slice(0,3).map(Number));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}
 function onEcgFrame(d){if(!Array.isArray(d.s))return;LIVE.frames++;LIVE.at=Math.max(LIVE.at,performance.now()-2000);
   const ms=((G.cur&&ROUTES[G.cur.route])||ROUTES[S.route]||ROUTES.iss).ms;
@@ -5725,7 +5725,7 @@ const LBL={'roll-l':'Sola yatır','roll-r':'Sağa yatır',spin:'Otomatik dönü�
 document.querySelectorAll('.hctl').forEach(c=>{c.innerHTML=Object.keys(ICONS).map(k=>`<button data-act="${k}" aria-label="${LBL[k]}"${k==='spin'?' aria-pressed="true"':''}><svg viewBox="0 0 24 24">${ICONS[k]}</svg></button>`).join('');});
 function setSpin(on){V.spin=on;document.querySelectorAll('[data-act="spin"]').forEach(b=>b.setAttribute('aria-pressed',String(on)));}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
-  if(a==='spin')setSpin(!V.spin);else if(a==='zero'){const L=LIVE.mo||{};IMU0={p:+L.p||0,r:+L.r||0,y:+L.y||0};pp=pr=pyw=0;V.yaw=0;V.pitch=0;V.roll=0;V.zoom=1;setSpin(false);b.classList.add('done');setTimeout(()=>b.classList.remove('done'),700);}else if(a==='reset'){V.yaw=-18;V.pitch=4;V.roll=0;V.zoom=1;}else if(a==='roll-l')V.roll+=15;else if(a==='roll-r')V.roll-=15;});
+  if(a==='spin')setSpin(!V.spin);else if(a==='zero'){const L=LIVE.mo||{};IMU0={p:+L.p||0,r:+L.r||0,y:+L.y||0};IMU0q=L.q?L.q.slice():null;IMU0M=null;pp=pr=pyw=0;V.yaw=0;V.pitch=0;V.roll=0;V.zoom=1;setSpin(false);b.classList.add('done');setTimeout(()=>b.classList.remove('done'),700);}else if(a==='reset'){V.yaw=-18;V.pitch=4;V.roll=0;V.zoom=1;}else if(a==='roll-l')V.roll+=15;else if(a==='roll-r')V.roll-=15;});
 let drag=null,pinch=null;
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId};cv.setPointerCapture(e.pointerId);cv.classList.add('drag');setSpin(false);});
 cv.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;
@@ -6006,7 +6006,20 @@ $('g-send').addEventListener('click',doSend);
 $('g-in').addEventListener('keydown',e=>{if(e.key==='Enter')doSend();});
 
 /* ---------- loops ---------- */
-let last=performance.now(),pp=0,pr=0,pyw=0,IMU0={p:0,r:0,y:0};
+let last=performance.now(),pp=0,pr=0,pyw=0,IMU0={p:0,r:0,y:0},IMU0q=null,QT=null;
+// Sensör ekseni -> model ekseni, sıfırlama anında otomatik: yukarı = yerçekiminin tersi, ileri = kartın yüzü (göğüsten dışarı).
+// Kart göğüste hangi yöne çevrik takılırsa takılsın doğru eşleşir. Kart yatay duruyorsa doğrudan eşleme kullanılır.
+let IMU0M=null;
+function axesFrom(a){const[w,x,y,z]=a,u=[2*(x*z-w*y),2*(w*x+y*z),w*w-x*x-y*y+z*z];
+  const d=u[2];if(Math.abs(d)>.9)return null;let f=[-d*u[0],-d*u[1],1-d*u[2]];const n=Math.hypot(...f);f=f.map(v=>v/n);
+  const r=[u[1]*f[2]-u[2]*f[1],u[2]*f[0]-u[0]*f[2],u[0]*f[1]-u[1]*f[0]];return[r,u,f];}
+function poseQ(dt){const q=LIVE.mo.q;if(!IMU0q){IMU0q=q.slice();IMU0M=null;}const a=IMU0q;   // sıfırlama anına göre gerçek 3B dönüş
+  if(IMU0M===null)IMU0M=axesFrom(a)||0;
+  const w=a[0]*q[0]+a[1]*q[1]+a[2]*q[2]+a[3]*q[3];let x=a[0]*q[1]-a[1]*q[0]-a[2]*q[3]+a[3]*q[2],
+        y=a[0]*q[2]+a[1]*q[3]-a[2]*q[0]-a[3]*q[1],z=a[0]*q[3]-a[1]*q[2]+a[2]*q[1]-a[3]*q[0];
+  if(IMU0M){const M=IMU0M,v=[x,y,z];[x,y,z]=M.map(m=>m[0]*v[0]+m[1]*v[1]+m[2]*v[2]);}
+  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();
+  poseG.quaternion.slerp(QT,1-Math.exp(-dt*12));}
 const wrap180=a=>((a%360)+540)%360-180;
 function loop(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;
@@ -6017,7 +6030,7 @@ function loop(now){
   if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-IMU0.p-pp)*k;pr+=((+LIVE.mo.r||0)-IMU0.r-pr)*k;pyw+=wrap180((+LIVE.mo.y||0)-IMU0.y-pyw)*k;}
   else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
+  if(imuNow&&LIVE.mo.q)poseQ(dt);else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
@@ -6724,7 +6737,7 @@ function espConnect(ip){
 function onVit(d){LIVE.at=performance.now();LIVE.hr=+d.hr||0;{const h=+d.hrv||0;LIVE.hrv=h>=5&&h<=250?h:0;}LIVE.nrr=+d.nrr||0;LIVE.off=!!d.off;LIVE.inv=!!d.inv;LIVE.phr=+d.phr||0;LIVE.sok=d.sok==null?-1:+d.sok;LIVE.spo2=+d.spo2||0;LIVE.temp=+d.temp||0;LIVE.ex=d.ex==null?-1:+d.ex;LIVE.bat=d.bat==null?-1:+d.bat;LIVE.bv=+d.bv||0;if(d.vb)LIVE.bv=(+d.vb||0)/1000;if(d.mok){const ac=+d.act||0,pv=LIVE.mo;LIVE.imuAt=performance.now();LIVE.mo={p:+d.pit||0,r:+d.rol||0,int:ac,spm:0,st:pv?pv.st:0,still:ac<3?((pv&&pv.still)||0)+1:0,act:+d.ex?'kosu':'istasyon',fall:+d.fall||0};if(Array.isArray(d.acc)){d.acc.slice(0,20).forEach(x=>LIVE.imuQ.push(x.slice(0,3).map(Number)));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}}
   espStatus(LIVE.off?('ESP32 connected but one of the ECG electrodes has no contact.'+(LIVE.phr?' Heart rate from finger sensor: '+LIVE.phr+' bpm.':'')):'Live: ECG '+(LIVE.hr||'--')+' · HW-605 '+(LIVE.sok===2?(LIVE.phr||'--')+' beats, SpO₂ '+(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'calculating'):LIVE.sok===1?'no contact':LIVE.sok===0?'not attached':'--')+' · temperature '+(LIVE.temp?LIVE.temp.toFixed(1)+' °C':'--')+' · egzersiz '+(LIVE.ex===1?'on':'off')+' · battery '+(LIVE.bat>=0?'%'+LIVE.bat+' ('+LIVE.bv.toFixed(2)+' V)':'USB')+' · hareket '+(performance.now()-LIVE.imuAt<2000&&LIVE.mo?LIVE.mo.act+' %'+LIVE.mo.int:'--')+' || ECG heart rate '+(LIVE.hr||'--')+' bpm · finger pulse '+(LIVE.phr||'--')+' · '+LIVE.nrr+' R-R intervals · '+LIVE.frames+' ECG packets');paintEsp();}
 function onImu(d){LIVE.imuAt=performance.now();
-  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
+  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,q:Array.isArray(d.q)&&d.q.length===4?d.q.map(Number):null,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
   if(Array.isArray(d.a))LIVE.imuQ.push(d.a.slice(0,3).map(Number));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}
 function onEcgFrame(d){if(!Array.isArray(d.s))return;LIVE.frames++;LIVE.at=Math.max(LIVE.at,performance.now()-2000);
   const ms=((G.cur&&ROUTES[G.cur.route])||ROUTES[S.route]||ROUTES.iss).ms;
@@ -7377,7 +7390,7 @@ const LBL={'roll-l':'Tilt left','roll-r':'Tilt right',spin:'Auto rotate',zero:'Z
 document.querySelectorAll('.hctl').forEach(c=>{c.innerHTML=Object.keys(ICONS).map(k=>`<button data-act="${k}" aria-label="${LBL[k]}"${k==='spin'?' aria-pressed="true"':''}><svg viewBox="0 0 24 24">${ICONS[k]}</svg></button>`).join('');});
 function setSpin(on){V.spin=on;document.querySelectorAll('[data-act="spin"]').forEach(b=>b.setAttribute('aria-pressed',String(on)));}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
-  if(a==='spin')setSpin(!V.spin);else if(a==='zero'){const L=LIVE.mo||{};IMU0={p:+L.p||0,r:+L.r||0,y:+L.y||0};pp=pr=pyw=0;V.yaw=0;V.pitch=0;V.roll=0;V.zoom=1;setSpin(false);b.classList.add('done');setTimeout(()=>b.classList.remove('done'),700);}else if(a==='reset'){V.yaw=-18;V.pitch=4;V.roll=0;V.zoom=1;}else if(a==='roll-l')V.roll+=15;else if(a==='roll-r')V.roll-=15;});
+  if(a==='spin')setSpin(!V.spin);else if(a==='zero'){const L=LIVE.mo||{};IMU0={p:+L.p||0,r:+L.r||0,y:+L.y||0};IMU0q=L.q?L.q.slice():null;IMU0M=null;pp=pr=pyw=0;V.yaw=0;V.pitch=0;V.roll=0;V.zoom=1;setSpin(false);b.classList.add('done');setTimeout(()=>b.classList.remove('done'),700);}else if(a==='reset'){V.yaw=-18;V.pitch=4;V.roll=0;V.zoom=1;}else if(a==='roll-l')V.roll+=15;else if(a==='roll-r')V.roll-=15;});
 let drag=null,pinch=null;
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId};cv.setPointerCapture(e.pointerId);cv.classList.add('drag');setSpin(false);});
 cv.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;
@@ -7658,7 +7671,20 @@ $('g-send').addEventListener('click',doSend);
 $('g-in').addEventListener('keydown',e=>{if(e.key==='Enter')doSend();});
 
 /* ---------- loops ---------- */
-let last=performance.now(),pp=0,pr=0,pyw=0,IMU0={p:0,r:0,y:0};
+let last=performance.now(),pp=0,pr=0,pyw=0,IMU0={p:0,r:0,y:0},IMU0q=null,QT=null;
+// Sensör ekseni -> model ekseni, sıfırlama anında otomatik: yukarı = yerçekiminin tersi, ileri = kartın yüzü (göğüsten dışarı).
+// Kart göğüste hangi yöne çevrik takılırsa takılsın doğru eşleşir. Kart yatay duruyorsa doğrudan eşleme kullanılır.
+let IMU0M=null;
+function axesFrom(a){const[w,x,y,z]=a,u=[2*(x*z-w*y),2*(w*x+y*z),w*w-x*x-y*y+z*z];
+  const d=u[2];if(Math.abs(d)>.9)return null;let f=[-d*u[0],-d*u[1],1-d*u[2]];const n=Math.hypot(...f);f=f.map(v=>v/n);
+  const r=[u[1]*f[2]-u[2]*f[1],u[2]*f[0]-u[0]*f[2],u[0]*f[1]-u[1]*f[0]];return[r,u,f];}
+function poseQ(dt){const q=LIVE.mo.q;if(!IMU0q){IMU0q=q.slice();IMU0M=null;}const a=IMU0q;   // sıfırlama anına göre gerçek 3B dönüş
+  if(IMU0M===null)IMU0M=axesFrom(a)||0;
+  const w=a[0]*q[0]+a[1]*q[1]+a[2]*q[2]+a[3]*q[3];let x=a[0]*q[1]-a[1]*q[0]-a[2]*q[3]+a[3]*q[2],
+        y=a[0]*q[2]+a[1]*q[3]-a[2]*q[0]-a[3]*q[1],z=a[0]*q[3]-a[1]*q[2]+a[2]*q[1]-a[3]*q[0];
+  if(IMU0M){const M=IMU0M,v=[x,y,z];[x,y,z]=M.map(m=>m[0]*v[0]+m[1]*v[1]+m[2]*v[2]);}
+  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();
+  poseG.quaternion.slerp(QT,1-Math.exp(-dt*12));}
 const wrap180=a=>((a%360)+540)%360-180;
 function loop(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;
@@ -7669,7 +7695,7 @@ function loop(now){
   if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-IMU0.p-pp)*k;pr+=((+LIVE.mo.r||0)-IMU0.r-pr)*k;pyw+=wrap180((+LIVE.mo.y||0)-IMU0.y-pyw)*k;}
   else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
+  if(imuNow&&LIVE.mo.q)poseQ(dt);else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
