@@ -1,5 +1,7 @@
 # BioNova S3 · pertinaks devresi
 
+> **Yarışma sürümü notu (15 Kasım):** HW-605 (MAX30102) modülü yarışmada arızalandı. `BioNova_S3.ino` şu an yalnızca MPU6050'yi kullanır; panel nabız, SpO₂ ve HRV'yi "Simülasyon" olarak gösterir. Aşağıdaki MAX30102 bağlantıları sensör değiştirildiğinde geçerlidir.
+
 Parçalar: Seeed XIAO ESP32-S3 · HW-605 (MAX30102) · GY-521 (MPU6050) ·
 2 × 7'li dişi pin başlığı (XIAO için) · 2 × 4'lü dişi başlık ya da JST (modüller için) ·
 100 nF seramik + 10 µF kondansatör (önerilir) · tek damarlı bakır tel.
