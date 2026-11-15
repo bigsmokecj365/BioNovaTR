@@ -1,48 +1,79 @@
-# BioNova — Astronot Sağlık Paneli
+# BioNova — Astronaut Health Dashboard
 
-**NASA Space Apps Challenge 2026 · Bursa · Görev: Create Your Own Health Monitoring**
-Takım **BioNovaTR**: Eymen AKCA · Oğuz FENLİ · Ömer Abdullah DEMİR
+**NASA Space Apps Challenge 2026 · Bursa, Türkiye**
+**Challenge:** [Create Health Monitoring Software for Astronauts on Space Missions](https://www.spaceappschallenge.org/2026/challenges/health-monitoring-software/)
+**Team BioNovaTR:** Eymen AKCA · Oğuz FENLİ · Ömer Abdullah DEMİR
 
-Mars'ta yardım 20 dakika uzakta. BioNova, astronotun Dünya'yı beklemeden kendi sağlık verilerini görüp
-ne yapacağını bilmesini sağlayan internetsiz bir panel ve giyilebilir sensördür.
-Her uyarı kimin harekete geçeceğini söyler: **kendin uygula · ekibe bildir · uçuş cerrahına danış**.
+> A message from Mars can take up to 20 minutes. BioNova lets astronauts check their own health,
+> understand it, and know who should act next, without waiting for Earth.
 
-## Dosyalar
+🇹🇷 Türkçe: [README.tr.md](README.tr.md)
 
-| Dosya / klasör | Ne işe yarar |
+## Demo
+
+| | Link |
 |---|---|
-| `BioNova_Panel.html` | Tek dosyalık panel (rol seçimli). Tarayıcıda çift tıklayıp açın, kurulum gerekmez. |
-| `BioNova_Astronot.html` | Sadece astronot ekranı |
-| `BioNova_YerKontrol.html` | Sadece yer kontrol ekranı (veriyi bağlantı gecikmesiyle alır) |
-| `sunucu/` | İki ekranı ağ üzerinden bağlayan küçük Python sunucusu (port 8765) |
-| `aktarici/` | Sunucu yoksa aynı Wi-Fi'deki iki bilgisayarı bağlayan yerel aktarıcı |
-| `firmware/` | XIAO ESP32-S3 kodu, bağlantı şeması ve pertinaks yerleşimi |
-| `medya/` | Tanıtım videosu ve fikir şeması |
+| Slide deck (English, 7 slides) | [docs/BioNova_Pitch_EN.pdf](docs/BioNova_Pitch_EN.pdf) · [.pptx](docs/BioNova_Pitch_EN.pptx) |
+| Video (28.9 s) | [medya/BioNova_teaser.mp4](medya/BioNova_teaser.mp4) |
+| Dashboard (single file, offline) | [BioNova_Panel.html](BioNova_Panel.html): download it and open it in Chrome or Edge |
+| Turkish deck (local jury) | [docs/BioNova_Sunum_TR.pdf](docs/BioNova_Sunum_TR.pdf) · [.pptx](docs/BioNova_Sunum_TR.pptx) |
 
-## Çalıştırma
+## What it does
 
-- **Sadece panel:** `BioNova_Panel.html` dosyasını Chrome veya Edge ile açın. Sensör bağlı değilken veriler "Simülasyon" etiketiyle gösterilir.
-- **Sensörle (USB):** Arduino IDE ile `firmware/BioNova_S3/BioNova_S3.ino` dosyasını yükleyin (kütüphane: WebSockets). Bağlantılar `firmware/BAGLANTI.md` içinde.
-- **İki ekran (sunucu):** `sunucu/` klasörüne üç HTML dosyasını da kopyalayın, sonra Ubuntu/Debian'da `bash kur.sh`. Ayrıntılar `sunucu/KURULUM.txt` içinde.
-- **İki ekran (sunucusuz):** `aktarici/BASLAT.bat`, ayrıntılar `aktarici/NASIL_KULLANILIR.txt` içinde.
+- **Measure:** a wearable motion sensor (XIAO ESP32-S3 + MPU6050) plus a 1-minute daily check-in for blood pressure, blood glucose (mg/dL), sleep and mood.
+- **Understand:** color-coded levels, 7- and 30-day trends, and a clickable 3D anatomy model with 6 body systems. Each metric has a "?" card that explains how to measure it, why it matters, and which NASA HRP hazards affect it.
+- **Act:** every alert says who should act: **self-care**, **alert the crew**, or **call the flight surgeon**. A second screen for ground control receives the data with the real link delay for the ISS, the Moon and Mars (shortened to 8 s in the demo).
+- 8 training scenarios · ISS / Moon / Mars · English and Turkish · runs offline from a single HTML file.
 
-## Demoda ne gerçek
+## NASA data and resources
 
-- **Canlı:** hareket, duruş, adım ve düşme (MPU6050), NASA DONKI uzay havası
-- **Elle girilen:** tansiyon, kan şekeri, uyku, ruh hali
-- **Simülasyon:** nabız ve SpO₂ (MAX30102 modülümüz yarışmada arızalandı), EKG ve HRV (AD8232 arızalandı), sıcaklık, solunum, radyasyon dozu, 30 günlük örnek geçmiş, 8 senaryo. Mars gecikmesi demoda 8 sn'ye kısaltıldı.
-- Eşikler genel klinik aralıklardır; tıbbi cihaz değildir, teşhis için kullanılmaz.
+| NASA source | How BioNova uses it |
+|---|---|
+| DONKI API (api.nasa.gov) | Fetches 30 days of solar flares and SEP events, caches them for offline use, and drives the space-weather card and the "go to shelter" alert |
+| NASA-STD-3001 technical briefs | Radiation (OCHMO-TB-020), CO₂ (OCHMO-TB-004) and sleep limits become alarm thresholds |
+| HRP: The Human Body in Space (RIDGE) + Human System Risks | Each metric is mapped to a body system and to the 5 spaceflight hazards |
+| HRP bone and exercise sources | 1–1.5 %/month bone loss in hips and spine, used for the bone-health estimate |
+| NASA 3D Resources: EMU suit | Embedded 3D astronaut that mirrors the wearer's posture |
 
-## Kaynaklar ve lisanslar
+All links are in the dashboard's **Sources** panel.
 
-**NASA:** DONKI uzay havası API'si (api.nasa.gov) · The Human Body in Space, HRP · Human System Risks ·
-NASA-STD-3001 teknik notları (radyasyon OCHMO-TB-020, CO₂ OCHMO-TB-004, uyku) · NTRS 20230003916 ·
-Risk of Spaceflight-Induced Bone Changes · Counteracting Bone and Muscle Loss ·
-Space Faring: The Radiation Challenge · NASA 3D Resources EMU modeli.
+## What is real in the demo
 
-**Üçüncü taraf:** BodyParts3D © DBCLS, CC BY-SA 2.1 JP · three.js + GLTFLoader, MIT ·
-SparkFun MAX3010x, MIT · arduinoWebSockets, LGPL-2.1 · Oswald ve Inter yazı tipleri, SIL OFL.
+- **Live:** motion, posture, steps and falls (MPU6050); NASA DONKI space weather (last cached data when offline)
+- **Typed in:** blood pressure, blood glucose, sleep, mood
+- **Simulated:** heart rate and SpO₂ (our MAX30102 module failed at the event), ECG and HRV (our AD8232 failed), temperature, respiration, radiation dose, 30-day sample history, 8 scenarios. The dashboard shows a "Simulation" label whenever a sensor is not connected.
+- **Limits:** thresholds are general clinical ranges, not yet spaceflight-specific. Posture and fall detection need gravity, so they apply on the Moon and Mars, not in microgravity. BioNova is not a medical device and must not be used for diagnosis.
 
-Tanıtım videosundaki seslendirme yapay zekâ ile üretilmiştir.
+## How to run
 
-**Kendi kodumuz:** MIT Lisansı — bkz. `LICENSE`. Üçüncü taraf içerikler kendi lisanslarıyla kalır.
+- **Dashboard only:** open `BioNova_Panel.html` in Chrome or Edge. No install and no internet needed.
+- **With the sensor (USB or Wi-Fi):** flash `firmware/BioNova_S3/BioNova_S3.ino` with Arduino IDE (board: XIAO_ESP32S3, library: WebSockets by Markus Sattler). Wiring is in `firmware/BAGLANTI.md`.
+- **Two screens over a server:** copy the three HTML files into `sunucu/` and run `bash kur.sh` on Ubuntu/Debian (see `sunucu/KURULUM.txt`). Routes: `/astronot`, `/yerkontrol`, `/panel`.
+- **Two screens without a server:** run `aktarici/BASLAT.bat` on one laptop (see `aktarici/NASIL_KULLANILIR.txt`).
+
+`BioNova_Astronot.html` and `BioNova_YerKontrol.html` are the same dashboard, opened directly in the astronaut or ground-control role. The server needs all three files.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `BioNova_Panel.html` | Dashboard with role selection (astronaut / ground control) |
+| `BioNova_Astronot.html`, `BioNova_YerKontrol.html` | The same dashboard locked to one role |
+| `docs/` | Slide decks (English and Turkish) as PDF and PPTX |
+| `medya/` | Teaser video and concept diagram |
+| `firmware/` | XIAO ESP32-S3 code, wiring and perfboard layout |
+| `sunucu/` | Small Python server that serves the pages and relays data between screens |
+| `aktarici/` | Local relay for two laptops on the same Wi-Fi |
+
+## Use of AI
+
+- The voice-over in the teaser video is AI-generated (also stated in the video and its metadata).
+
+## Licenses and credits
+
+- **Our code:** MIT License, see [`LICENSE`](LICENSE).
+- **Third-party content keeps its own license.** The HTML files embed third-party assets, so the MIT license covers only our own code inside them:
+  - BodyParts3D © The Database Center for Life Science (DBCLS), **CC BY-SA 2.1 JP**: the anatomy model and anything derived from it stay under CC BY-SA 2.1 JP.
+  - NASA 3D Resources EMU model: NASA media usage guidelines.
+  - three.js + GLTFLoader: MIT · SparkFun MAX3010x library: MIT · arduinoWebSockets: LGPL-2.1 · Oswald and Inter fonts: SIL OFL 1.1.
+- NASA does not endorse this project.

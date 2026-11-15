@@ -3,7 +3,7 @@ BioNova · iki ayrı sayfa + ev sunucusu
 Sayfalar (BioNova klasöründe):
   BioNova_Astronot.html    → sadece astronot ekranı
   BioNova_YerKontrol.html  → sadece yer kontrol ekranı
-  BioNova_Panel_v8.html    → iki ekran tek sayfada (eski düzen), sunucu desteği de var
+  BioNova_Panel.html       → iki ekran tek sayfada (rol seçimli), sunucu desteği de var
 
 1) Sunucuda aktarıcıyı çalıştır (Python 3, ek paket yok):
      python3 bionova_aktarici.py 8765

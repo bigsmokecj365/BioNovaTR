@@ -8,7 +8,7 @@ Kart yoksa:
 2. Bilgisayar A'da BASLAT.bat'a çift tıkla (Python kurulu olmalı).
    Windows güvenlik duvarı sorarsa "Özel ağlar"a izin ver.
    Pencerede bu bilgisayarın IP'si yazar (ör. 192.168.43.12).
-3. Bilgisayar A'da BioNova_Panel_v7.html'i aç → üstte ESP32 → adres: 127.0.0.1
+3. Bilgisayar A'da BioNova_Panel.html'i aç → üstte ESP32 → adres: 127.0.0.1
    Rol: Astronot.
 4. Bilgisayar B'de aynı dosyayı aç → ESP32 → adres: A'nın IP'si
    Rol: Yer kontrol.
