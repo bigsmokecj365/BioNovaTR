@@ -1,0 +1,32 @@
+BioNova · iki ayrı sayfa + ev sunucusu
+
+Sayfalar (BioNova klasöründe):
+  BioNova_Astronot.html    → sadece astronot ekranı
+  BioNova_YerKontrol.html  → sadece yer kontrol ekranı
+  BioNova_Panel_v8.html    → iki ekran tek sayfada (eski düzen), sunucu desteği de var
+
+1) Sunucuda aktarıcıyı çalıştır (Python 3, ek paket yok):
+     python3 bionova_aktarici.py 8765
+   (İsteğe bağlı şifre: BIONOVA_KEY=sifre python3 bionova_aktarici.py 8765)
+   Sürekli çalışsın istersen systemd servisi ya da tmux/screen içinde başlat.
+
+2) Sunucuya erişim:
+   - Aynı ağdaysanız: ws://SUNUCU_IP:8765
+   - Farklı ağlardaysanız: ya modemde 8765 portunu sunucuya yönlendir
+     (ws://EV_IP_ADRESI:8765), ya da daha güvenlisi Tailscale kur
+     ve Tailscale IP'sini kullan. Ters vekil (nginx/Caddy) + alan adın varsa
+     wss://alanadi/bionova de olur.
+
+3) Her bilgisayarda ilgili sayfayı çift tıklayarak aç (file://),
+   üst çubuktaki "Sunucu: yok" düğmesine bas, adresi yapıştır.
+   Adres hatırlanır. Ya da adresi linke ekle:
+     BioNova_YerKontrol.html?server=ws://SUNUCU_IP:8765
+   Düğme "Sunucu: bağlı" olunca yer kontrol ekranında
+   "Uzak astronot monitörüne bağlanıldı" kaydı çıkar.
+
+Notlar:
+- Astronot sayfası aynı anda hem ESP32'ye (sensör) hem sunucuya bağlanabilir.
+- Sayfa https ile açılırsa tarayıcı ws:// adresini engeller; o durumda wss:// gerekir.
+- Sunucu koparsa sayfalar 3 sn'de bir yeniden dener; bu arada yer kontrol
+  kendi simülasyonuna geçer (ekranda yazar).
+- Aktarıcı ayrı bir portta (8765) çalışır; aynı sunucudaki web sitesine dokunmaz.

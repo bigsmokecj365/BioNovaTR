@@ -1,0 +1,16 @@
+[Unit]
+Description=BioNova sunucusu (sayfalar + astronot/yer kontrol aktarıcı)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=KULLANICI
+WorkingDirectory=/home/KULLANICI/bionova
+ExecStart=/usr/bin/python3 /home/KULLANICI/bionova/bionova_sunucu.py 8765
+Restart=always
+RestartSec=3
+MemoryMax=300M
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

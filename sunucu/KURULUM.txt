@@ -1,0 +1,50 @@
+BioNova · Ubuntu sunucuya kurulum (diğer siteye dokunmaz)
+
+BioNova ayrı bir program olarak 8765 portunda çalışır. Nginx/Apache ayarı,
+alan adı ve diğer site değişmez. Sayfalar IP adresiyle açılır.
+
+1) Klasörü sunucuya kopyala (Windows PowerShell'den, BioNova klasöründeyken):
+     scp -r sunucu KULLANICI@SUNUCU_YEREL_IP:~/bionova
+
+2) Sunucuda bir kez elle dene:
+     cd ~/bionova
+     python3 bionova_sunucu.py 8765
+   Aynı evdeki bilgisayardan aç:  http://SUNUCU_YEREL_IP:8765/
+   Çalışıyorsa Ctrl+C ile kapat.
+
+3) Güvenlik duvarı açıksa portu aç (sadece bu port):
+     sudo ufw status
+     sudo ufw allow 8765/tcp
+
+4) Sürekli çalışsın, sunucu yeniden başlayınca da açılsın:
+     sed -i "s/KULLANICI/$USER/g" ~/bionova/bionova.service
+     sudo cp ~/bionova/bionova.service /etc/systemd/system/
+     sudo systemctl daemon-reload
+     sudo systemctl enable --now bionova
+     systemctl status bionova          (active (running) görmelisin)
+     journalctl -u bionova -f          (bağlanan ekranları canlı izle)
+
+5) Yarışma salonundan erişim (dışarıdan):
+   Modem arayüzünde "Port yönlendirme / NAT" bölümünde
+     dış port 8765  →  SUNUCU_YEREL_IP : 8765 (TCP)
+   ekle. Ev IP'ni öğren:  curl -4 ifconfig.me
+   Telefonun mobil verisiyle dene:  http://EV_IP:8765/
+
+6) Salonda:
+   Bilgisayar 1: http://EV_IP:8765/astronot
+   Bilgisayar 2: http://EV_IP:8765/yerkontrol
+   Üst çubukta "Sunucu: bağlı" yazmalı. Ekstra ayar gerekmez.
+
+Notlar
+- Sayfa ilk açılışta yaklaşık 7,7 MB iner (evin yükleme hızına bağlı, birkaç saniye).
+  Jüri gelmeden önce iki sayfayı da açık bırak.
+- Tarayıcı adres çubuğunda "Güvenli değil" der (https yok). Bu normal; veri
+  sadece ekranlar arası anlık mesajdır, hiçbir yerde saklanmaz.
+- Astronot sayfası ESP32'ye de bağlanabilir (ESP32 düğmesi). Sayfa http olduğu
+  için ESP32 bağlantısına izin verilir.
+- Ev IP'si değişebilir (dinamik IP). Sabah salona gitmeden önce 5. adımı tekrar kontrol et.
+- Yedek plan: sunucuya ulaşılamazsa bilgisayardaki BioNova_Astronot.html /
+  BioNova_YerKontrol.html dosyalarını aç, aktarici/BASLAT.bat ile yerel aktarıcıyı kullan.
+- Sayfaları güncellemek için sadece yeni .html dosyalarını ~/bionova içine kopyala;
+  sunucuyu yeniden başlatmaya gerek yok.
+- Kapatmak için:  sudo systemctl disable --now bionova  ve modemdeki yönlendirmeyi sil.

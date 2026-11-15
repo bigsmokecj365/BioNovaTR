@@ -1,0 +1,21 @@
+BioNova aktarıcı · iki bilgisayarda astronot + yer kontrol
+
+Kart (ESP32) bağlıysa buna gerek yok: kart mesajları zaten aktarır,
+iki bilgisayar da panelde ESP32 düğmesine kartın IP'sini yazar.
+
+Kart yoksa:
+1. İki bilgisayarı aynı Wi-Fi'a ya da aynı telefon hotspot'una bağla.
+2. Bilgisayar A'da BASLAT.bat'a çift tıkla (Python kurulu olmalı).
+   Windows güvenlik duvarı sorarsa "Özel ağlar"a izin ver.
+   Pencerede bu bilgisayarın IP'si yazar (ör. 192.168.43.12).
+3. Bilgisayar A'da BioNova_Panel_v7.html'i aç → üstte ESP32 → adres: 127.0.0.1
+   Rol: Astronot.
+4. Bilgisayar B'de aynı dosyayı aç → ESP32 → adres: A'nın IP'si
+   Rol: Yer kontrol.
+5. Aktarıcı penceresinde "bağlı ekran: 2" görmelisin. Yer kontrol ekranında
+   "Uzak astronot monitörüne bağlanıldı" kaydı çıkar; uçuş cerrahı mesajları
+   astronot ekranına gider.
+
+Not: Sayfa https ile açılırsa tarayıcı bağlantıyı engeller; dosyayı
+çift tıklayarak (file://) aç. Bağlantı koparsa panel tek ekranda çalışmaya
+devam eder.
