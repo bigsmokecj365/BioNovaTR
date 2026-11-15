@@ -5071,7 +5071,7 @@ function espConnect(ip){
 function onVit(d){LIVE.at=performance.now();LIVE.hr=+d.hr||0;{const h=+d.hrv||0;LIVE.hrv=h>=5&&h<=250?h:0;}LIVE.nrr=+d.nrr||0;LIVE.off=!!d.off;LIVE.inv=!!d.inv;LIVE.phr=+d.phr||0;LIVE.sok=d.sok==null?-1:+d.sok;LIVE.spo2=+d.spo2||0;LIVE.temp=+d.temp||0;LIVE.ex=d.ex==null?-1:+d.ex;LIVE.bat=d.bat==null?-1:+d.bat;LIVE.bv=+d.bv||0;if(d.vb)LIVE.bv=(+d.vb||0)/1000;if(d.mok){const ac=+d.act||0,pv=LIVE.mo;LIVE.imuAt=performance.now();LIVE.mo={p:+d.pit||0,r:+d.rol||0,int:ac,spm:0,st:pv?pv.st:0,still:ac<3?((pv&&pv.still)||0)+1:0,act:+d.ex?'kosu':'istasyon',fall:+d.fall||0};if(Array.isArray(d.acc)){d.acc.slice(0,20).forEach(x=>LIVE.imuQ.push(x.slice(0,3).map(Number)));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}}
   espStatus(LIVE.off?('ESP32 bağlı ama EKG elektrotlarından biri temas etmiyor.'+(LIVE.phr?' Nabız parmak sensöründen: '+LIVE.phr+' atım/dk.':'')):'Canlı: EKG '+(LIVE.hr||'--')+' · HW-605 '+(LIVE.sok===2?(LIVE.phr||'--')+' atım, SpO₂ '+(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'hesaplanıyor'):LIVE.sok===1?'temas yok':LIVE.sok===0?'takılı değil':'--')+' · sıcaklık '+(LIVE.temp?LIVE.temp.toFixed(1)+' °C':'--')+' · egzersiz '+(LIVE.ex===1?'açık':'kapalı')+' · pil '+(LIVE.bat>=0?'%'+LIVE.bat+' ('+LIVE.bv.toFixed(2)+' V)':'USB')+' · hareket '+(performance.now()-LIVE.imuAt<2000&&LIVE.mo?LIVE.mo.act+' %'+LIVE.mo.int:'--')+' || EKG nabzı '+(LIVE.hr||'--')+' atım/dk · parmak nabzı '+(LIVE.phr||'--')+' · '+LIVE.nrr+' R-R aralığı · '+LIVE.frames+' EKG paketi');paintEsp();}
 function onImu(d){LIVE.imuAt=performance.now();
-  LIVE.mo={p:+d.p||0,r:+d.r||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
+  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
   if(Array.isArray(d.a))LIVE.imuQ.push(d.a.slice(0,3).map(Number));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}
 function onEcgFrame(d){if(!Array.isArray(d.s))return;LIVE.frames++;LIVE.at=Math.max(LIVE.at,performance.now()-2000);
   const ms=((G.cur&&ROUTES[G.cur.route])||ROUTES[S.route]||ROUTES.iss).ms;
@@ -6005,17 +6005,17 @@ $('g-send').addEventListener('click',doSend);
 $('g-in').addEventListener('keydown',e=>{if(e.key==='Enter')doSend();});
 
 /* ---------- loops ---------- */
-let last=performance.now(),pp=0,pr=0;
+let last=performance.now(),pp=0,pr=0,pyw=0;
 function loop(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;
   const p=curSnap();
   if(V.spin)V.yaw+=dt*14;
   rig.rotation.set(V.pitch*Math.PI/180,V.yaw*Math.PI/180,V.roll*Math.PI/180,'XYZ');
   const imuNow=role==='astro'&&imuLive();   // astronot ekranı: MPU açısı doğrudan, gecikmesiz
-  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;}
-  else if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
+  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;pyw+=((+LIVE.mo.y||0)-pyw)*k;}
+  else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  poseG.rotation.set(pp*Math.PI/180*psc,0,-pr*Math.PI/180*psc);
+  poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
@@ -6722,7 +6722,7 @@ function espConnect(ip){
 function onVit(d){LIVE.at=performance.now();LIVE.hr=+d.hr||0;{const h=+d.hrv||0;LIVE.hrv=h>=5&&h<=250?h:0;}LIVE.nrr=+d.nrr||0;LIVE.off=!!d.off;LIVE.inv=!!d.inv;LIVE.phr=+d.phr||0;LIVE.sok=d.sok==null?-1:+d.sok;LIVE.spo2=+d.spo2||0;LIVE.temp=+d.temp||0;LIVE.ex=d.ex==null?-1:+d.ex;LIVE.bat=d.bat==null?-1:+d.bat;LIVE.bv=+d.bv||0;if(d.vb)LIVE.bv=(+d.vb||0)/1000;if(d.mok){const ac=+d.act||0,pv=LIVE.mo;LIVE.imuAt=performance.now();LIVE.mo={p:+d.pit||0,r:+d.rol||0,int:ac,spm:0,st:pv?pv.st:0,still:ac<3?((pv&&pv.still)||0)+1:0,act:+d.ex?'kosu':'istasyon',fall:+d.fall||0};if(Array.isArray(d.acc)){d.acc.slice(0,20).forEach(x=>LIVE.imuQ.push(x.slice(0,3).map(Number)));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}}
   espStatus(LIVE.off?('ESP32 connected but one of the ECG electrodes has no contact.'+(LIVE.phr?' Heart rate from finger sensor: '+LIVE.phr+' bpm.':'')):'Live: ECG '+(LIVE.hr||'--')+' · HW-605 '+(LIVE.sok===2?(LIVE.phr||'--')+' beats, SpO₂ '+(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'calculating'):LIVE.sok===1?'no contact':LIVE.sok===0?'not attached':'--')+' · temperature '+(LIVE.temp?LIVE.temp.toFixed(1)+' °C':'--')+' · egzersiz '+(LIVE.ex===1?'on':'off')+' · battery '+(LIVE.bat>=0?'%'+LIVE.bat+' ('+LIVE.bv.toFixed(2)+' V)':'USB')+' · hareket '+(performance.now()-LIVE.imuAt<2000&&LIVE.mo?LIVE.mo.act+' %'+LIVE.mo.int:'--')+' || ECG heart rate '+(LIVE.hr||'--')+' bpm · finger pulse '+(LIVE.phr||'--')+' · '+LIVE.nrr+' R-R intervals · '+LIVE.frames+' ECG packets');paintEsp();}
 function onImu(d){LIVE.imuAt=performance.now();
-  LIVE.mo={p:+d.p||0,r:+d.r||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
+  LIVE.mo={p:+d.p||0,r:+d.r||0,y:+d.y||0,int:+d.int||0,spm:+d.spm||0,st:+d.st||0,still:+d.still||0,act:String(d.act||''),fall:+d.fall||0};
   if(Array.isArray(d.a))LIVE.imuQ.push(d.a.slice(0,3).map(Number));if(LIVE.imuQ.length>30)LIVE.imuQ.splice(0,LIVE.imuQ.length-30);}
 function onEcgFrame(d){if(!Array.isArray(d.s))return;LIVE.frames++;LIVE.at=Math.max(LIVE.at,performance.now()-2000);
   const ms=((G.cur&&ROUTES[G.cur.route])||ROUTES[S.route]||ROUTES.iss).ms;
@@ -7656,17 +7656,17 @@ $('g-send').addEventListener('click',doSend);
 $('g-in').addEventListener('keydown',e=>{if(e.key==='Enter')doSend();});
 
 /* ---------- loops ---------- */
-let last=performance.now(),pp=0,pr=0;
+let last=performance.now(),pp=0,pr=0,pyw=0;
 function loop(now){
   const dt=Math.min(.1,(now-last)/1000);last=now;
   const p=curSnap();
   if(V.spin)V.yaw+=dt*14;
   rig.rotation.set(V.pitch*Math.PI/180,V.yaw*Math.PI/180,V.roll*Math.PI/180,'XYZ');
   const imuNow=role==='astro'&&imuLive();   // astronot ekranı: MPU açısı doğrudan, gecikmesiz
-  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;}
-  else if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
+  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;pyw+=((+LIVE.mo.y||0)-pyw)*k;}
+  else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  poseG.rotation.set(pp*Math.PI/180*psc,0,-pr*Math.PI/180*psc);
+  poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);

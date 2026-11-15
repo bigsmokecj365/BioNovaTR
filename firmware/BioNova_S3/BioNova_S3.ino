@@ -30,16 +30,16 @@ bool imuOk = false;
 
 /* ---------- MPU6050 (doğrudan I2C) ---------- */
 const uint8_t MPU = 0x68;
-float pitch = 0, roll = 0, dynEma = 0, ax = 0, ay = 0, az = 1, mBase = 1.0f;  // mBase: sensörün durgun 1 g okuması (kalibrasyon sapmasını yok eder)
+float pitch = 0, roll = 0, yaw = 0, gbx = 0, gby = 0, gbz = 0, dynEma = 0, ax = 0, ay = 0, az = 1, mBase = 1.0f;  // mBase: sensörün durgun 1 g okuması (kalibrasyon sapmasını yok eder)
 uint32_t steps = 0, lastStep = 0, stepT[32]; uint8_t stepI = 0;
 uint32_t stillMs = 0, fallUntil = 0;
 
 void mpuWrite(uint8_t r, uint8_t v) { Wire.beginTransmission(MPU); Wire.write(r); Wire.write(v); Wire.endTransmission(); }
-bool mpuRead(float& x, float& y, float& z, float& gx, float& gy) {
+bool mpuRead(float& x, float& y, float& z, float& gx, float& gy, float& gz) {
   Wire.beginTransmission(MPU); Wire.write(0x3B); if (Wire.endTransmission(false) != 0) return false;
   if (Wire.requestFrom((int)MPU, 14) != 14) return false;
   int16_t v[7]; for (int i = 0; i < 7; i++) v[i] = (Wire.read() << 8) | Wire.read();
-  x = v[0] / 8192.0f; y = v[1] / 8192.0f; z = v[2] / 8192.0f; gx = v[4] / 65.5f; gy = v[5] / 65.5f;
+  x = v[0] / 8192.0f; y = v[1] / 8192.0f; z = v[2] / 8192.0f; gx = v[4] / 65.5f - gbx; gy = v[5] / 65.5f - gby; gz = v[6] / 65.5f - gbz;
   return true;
 }
 bool mpuInit() {
@@ -49,23 +49,30 @@ bool mpuInit() {
   mpuWrite(0x1B, 0x08);  // jiroskop ±500 °/s
   mpuWrite(0x1C, 0x08);  // ivme ±4 g
   delay(50);
-  float x, y, z, gx, gy;
-  if (mpuRead(x, y, z, gx, gy)) {               // başlangıç eğimi ve 1 g tabanı
+  float x, y, z, gx, gy, gz;
+  gbx = gby = gbz = 0;                           // jiroskop sıfır kalibrasyonu: açılışta 0,5 sn kartı oynatma
+  float sx = 0, sy = 0, sz = 0; int n = 0;
+  for (int i = 0; i < 100; i++) { if (mpuRead(x, y, z, gx, gy, gz)) { sx += gx; sy += gy; sz += gz; n++; } delay(5); }
+  if (n) { gbx = sx / n; gby = sy / n; gbz = sz / n; }
+  yaw = 0;
+  if (mpuRead(x, y, z, gx, gy, gz)) {               // başlangıç eğimi ve 1 g tabanı
     mBase = sqrtf(x * x + y * y + z * z);
     pitch = atan2f(-x, sqrtf(y * y + z * z)) * 57.2958f; roll = atan2f(y, z) * 57.2958f;
   }
   return true;
 }
 void imuStep(float dt) {
-  float gx, gy;
-  if (!mpuRead(ax, ay, az, gx, gy)) return;
+  float gx, gy, gz;
+  if (!mpuRead(ax, ay, az, gx, gy, gz)) return;
   float aP = atan2f(-ax, sqrtf(ay * ay + az * az)) * 57.2958f, aR = atan2f(ay, az) * 57.2958f;
-  pitch = 0.96f * (pitch + gy * dt) + 0.04f * aP;
-  roll  = 0.96f * (roll + gx * dt) + 0.04f * aR;
+  pitch = 0.98f * (pitch + gy * dt) + 0.02f * aP;   // jiroskop: hızlı ve pürüzsüz, ivme: uzun vadeli düzeltme
+  roll  = 0.98f * (roll + gx * dt) + 0.02f * aR;
+  if (fabsf(gz) > 0.6f) yaw += gz * dt;              // dönüş (pusula yok: zamanla az kayabilir)
+  if (yaw > 180) yaw -= 360; else if (yaw < -180) yaw += 360;
   float m = sqrtf(ax * ax + ay * ay + az * az);
-  mBase = mBase * 0.995f + m * 0.005f;          // yavaş taban: sensör 0,96 g da ölçse 0 hareket sayılır
+  mBase = mBase * 0.99875f + m * 0.00125f;          // yavaş taban: sensör 0,96 g da ölçse 0 hareket sayılır
   float dyn = fabsf(m - mBase);
-  dynEma = dynEma * 0.9f + dyn * 0.1f;
+  dynEma = dynEma * 0.975f + dyn * 0.025f;   // 200 Hz için eski 50 Hz zamanlaması
   uint32_t now = millis();
   if (m > mBase + 0.25f && now - lastStep > 280) { lastStep = now; steps++; stepT[stepI] = now; stepI = (stepI + 1) % 32; }
   if (m > mBase + 1.5f) fallUntil = now + 5000;   // ~2,5 g sert çarpma / düşme
@@ -80,9 +87,9 @@ void out(const char* s) { ws.broadcastTXT(s); if (usbJson && Serial) Serial.prin
 void sendImu() {
   int in = constrain((int)(dynEma * 250), 0, 100), sp = spm(), still = stillMs / 1000;
   const char* act = sp > 120 ? "kosu" : in > 25 ? "gecis" : still > 20 ? "hareketsiz" : in < 3 ? "dinlenme" : "istasyon";
-  char b[220];
-  snprintf(b, sizeof b, "{\"type\":\"imu\",\"p\":%d,\"r\":%d,\"int\":%d,\"spm\":%d,\"st\":%lu,\"still\":%d,\"act\":\"%s\",\"fall\":%d,\"a\":[%.2f,%.2f,%.2f]}",
-           (int)pitch, (int)roll, in, sp, (unsigned long)steps, still, act, millis() < fallUntil ? 1 : 0, ax, ay, az);
+  char b[260];
+  snprintf(b, sizeof b, "{\"type\":\"imu\",\"p\":%.1f,\"r\":%.1f,\"y\":%.1f,\"int\":%d,\"spm\":%d,\"st\":%lu,\"still\":%d,\"act\":\"%s\",\"fall\":%d,\"a\":[%.2f,%.2f,%.2f]}",
+           pitch, roll, yaw, in, sp, (unsigned long)steps, still, act, millis() < fallUntil ? 1 : 0, ax, ay, az);
   out(b);
 }
 
@@ -126,7 +133,7 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   uint32_t t0 = millis(); while (!Serial && millis() - t0 < 1500) delay(10);
   Serial.println("# BioNova S3 basliyor (sadece MPU6050)");
-  Wire.begin(I2C_SDA, I2C_SCL, 100000);
+  Wire.begin(I2C_SDA, I2C_SCL, 400000);   // sadece MPU: hızlı I2C
   imuOk = mpuInit();
   Serial.println(imuOk ? "# MPU6050 bulundu" : "# HATA: MPU6050 bulunamadi (adres 0x68). Kart 5 sn'de bir yeniden deneyecek.");
   wifiStart();
@@ -138,7 +145,7 @@ void loop() {
   static uint32_t tImu = 0, tImuTx = 0, tLed = 0, tRetry = 0;
   uint32_t now = millis();
   if (!imuOk && now - tRetry > 5000) { tRetry = now; imuOk = mpuInit(); if (imuOk) { Serial.println("# MPU6050 bulundu"); tImu = now; } }
-  if (imuOk && now - tImu >= 20) { imuStep((now - tImu) / 1000.0f); tImu = now; }
+  if (imuOk && now - tImu >= 5) { imuStep((now - tImu) / 1000.0f); tImu = now; }   // 200 Hz örnekleme
   if (imuOk && now - tImuTx >= 20) { tImuTx = now; sendImu(); }      // 50 Hz: 3B astronot gecikmesiz
   if (now - tLed >= (imuOk ? 1000 : 150)) { tLed = now; digitalWrite(LED_PIN, !digitalRead(LED_PIN)); }   // yavaş: çalışıyor, hızlı: MPU yok
   while (Serial.available()) {                    // panel USB'de 'J' gonderir; 'S' JSON'u susturur
