@@ -22,15 +22,15 @@ Her uyarı kimin harekete geçeceğini söyler: **kendin uygula · ekibe bildir 
 ## Çalıştırma
 
 - **Sadece panel:** `BioNova_Panel.html` dosyasını Chrome veya Edge ile açın. Sensör bağlı değilken veriler "Simülasyon" etiketiyle gösterilir.
-- **Sensörle (USB):** Arduino IDE ile `firmware/BioNova_S3/BioNova_S3.ino` dosyasını yükleyin (kütüphaneler: SparkFun MAX3010x, WebSockets). Bağlantılar `firmware/BAGLANTI.md` içinde.
+- **Sensörle (USB):** Arduino IDE ile `firmware/BioNova_S3/BioNova_S3.ino` dosyasını yükleyin (kütüphane: WebSockets). Bağlantılar `firmware/BAGLANTI.md` içinde.
 - **İki ekran (sunucu):** `sunucu/` klasörüne üç HTML dosyasını da kopyalayın, sonra Ubuntu/Debian'da `bash kur.sh`. Ayrıntılar `sunucu/KURULUM.txt` içinde.
 - **İki ekran (sunucusuz):** `aktarici/BASLAT.bat`, ayrıntılar `aktarici/NASIL_KULLANILIR.txt` içinde.
 
 ## Demoda ne gerçek
 
-- **Canlı:** nabız, SpO₂ (MAX30102), hareket (MPU6050), NASA DONKI uzay havası
+- **Canlı:** hareket, duruş, adım ve düşme (MPU6050), NASA DONKI uzay havası
 - **Elle girilen:** tansiyon, kan şekeri, uyku, ruh hali
-- **Simülasyon:** EKG ve HRV, sıcaklık, solunum, radyasyon dozu, 30 günlük örnek geçmiş, 8 senaryo. Mars gecikmesi demoda 8 sn'ye kısaltıldı.
+- **Simülasyon:** nabız ve SpO₂ (MAX30102 modülümüz yarışmada arızalandı), EKG ve HRV (AD8232 arızalandı), sıcaklık, solunum, radyasyon dozu, 30 günlük örnek geçmiş, 8 senaryo. Mars gecikmesi demoda 8 sn'ye kısaltıldı.
 - Eşikler genel klinik aralıklardır; tıbbi cihaz değildir, teşhis için kullanılmaz.
 
 ## Kaynaklar ve lisanslar
