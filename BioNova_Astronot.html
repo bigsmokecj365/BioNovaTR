@@ -6311,7 +6311,7 @@ netInit();
     on('lb-ppg',live&&LIVE.sok===2);tx('lb-ppg-t',!live||LIVE.sok<0?'--':LIVE.sok===2?(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'…')+' · '+(LIVE.phr||'--'):LIVE.sok===1?'temas yok':'takılı değil');
     on('lb-tmp',live&&LIVE.temp>0);tx('lb-tmp-t',live&&LIVE.temp>0?LIVE.temp.toFixed(1).replace('.',',')+' °C':'--');
     const imu=performance.now()-LIVE.imuAt<3000;
-    on('lb-imu',imu);tx('lb-imu-t',imu&&LIVE.mo?(LIVE.ex===1?'egzersiz':'sakin')+' · '+LIVE.mo.int:'--');
+    on('lb-imu',imu);tx('lb-imu-t',imu&&LIVE.mo?(LIVE.mo.q?(LIVE.ex===1?'egzersiz':'sakin')+' · '+LIVE.mo.int:(window.bnLang==='en'?'old board code: re-upload':'kart kodu eski: yeniden yükle')):'--');
     on('lb-bat',live&&LIVE.bat>=0);tx('lb-bat-t',live&&LIVE.bat>=0?'%'+LIVE.bat:'--');
   }
   window.__bnLive=()=>({at:LIVE.at,now:performance.now(),hr:LIVE.hr});
@@ -7977,7 +7977,7 @@ netInit();
     on('lb-ppg',live&&LIVE.sok===2);tx('lb-ppg-t',!live||LIVE.sok<0?'--':LIVE.sok===2?(LIVE.spo2?LIVE.spo2.toFixed(0)+'%':'…')+' · '+(LIVE.phr||'--'):LIVE.sok===1?'temas yok':'takılı değil');
     on('lb-tmp',live&&LIVE.temp>0);tx('lb-tmp-t',live&&LIVE.temp>0?LIVE.temp.toFixed(1).replace('.',',')+' °C':'--');
     const imu=performance.now()-LIVE.imuAt<3000;
-    on('lb-imu',imu);tx('lb-imu-t',imu&&LIVE.mo?(LIVE.ex===1?'egzersiz':'sakin')+' · '+LIVE.mo.int:'--');
+    on('lb-imu',imu);tx('lb-imu-t',imu&&LIVE.mo?(LIVE.mo.q?(LIVE.ex===1?'egzersiz':'sakin')+' · '+LIVE.mo.int:(window.bnLang==='en'?'old board code: re-upload':'kart kodu eski: yeniden yükle')):'--');
     on('lb-bat',live&&LIVE.bat>=0);tx('lb-bat-t',live&&LIVE.bat>=0?'%'+LIVE.bat:'--');
   }
   window.__bnLive=()=>({at:LIVE.at,now:performance.now(),hr:LIVE.hr});

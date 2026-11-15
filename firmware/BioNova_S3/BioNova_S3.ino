@@ -44,7 +44,7 @@ void qFromAccel(float x, float y, float z) {       // açılışta yerçekimine 
 void mahony(float gx, float gy, float gz, float x, float y, float z, float dt) {   // g: rad/s, a: g
   const float KP = 1.2f;                           // ivmeyle düzeltme gücü (yüksek = sert, düşük = kayar)
   float n = sqrtf(x * x + y * y + z * z);
-  if (n > 0.85f && n < 1.15f) {                    // sadece sakin anlarda yerçekimine güven: darbe/sarsıntı yönü bozmaz
+  if (n > 0.9f && n < 1.1f) {                    // sadece sakin anlarda yerçekimine güven: darbe/sarsıntı yönü bozmaz
     x /= n; y /= n; z /= n;
     float vx = 2 * (qx * qz - qw * qy), vy = 2 * (qw * qx + qy * qz), vz = qw * qw - qx * qx - qy * qy + qz * qz;
     gx += KP * (y * vz - z * vy); gy += KP * (z * vx - x * vz); gz += KP * (x * vy - y * vx);
@@ -71,10 +71,16 @@ bool mpuInit() {
   mpuWrite(0x1C, 0x08);  // ivme ±4 g
   delay(50);
   float x, y, z, gx, gy, gz;
-  gbx = gby = gbz = 0;                           // jiroskop sıfır kalibrasyonu: açılışta 0,5 sn kartı oynatma
-  float sx = 0, sy = 0, sz = 0; int n = 0;
-  for (int i = 0; i < 100; i++) { if (mpuRead(x, y, z, gx, gy, gz)) { sx += gx; sy += gy; sz += gz; n++; } delay(5); }
-  if (n) { gbx = sx / n; gby = sy / n; gbz = sz / n; }
+  gbx = gby = gbz = 0;                           // jiroskop sıfır kalibrasyonu: kart sabitken 1 sn ölç, oynatılırsa tekrar dene
+  for (int tries = 0; tries < 5; tries++) {
+    float sx = 0, sy = 0, sz = 0, qq = 0; int n = 0;
+    for (int i = 0; i < 200; i++) { if (mpuRead(x, y, z, gx, gy, gz)) { sx += gx; sy += gy; sz += gz; qq += gx * gx + gy * gy + gz * gz; n++; } delay(5); }
+    if (!n) break;
+    float mx = sx / n, my = sy / n, mz = sz / n, var = qq / n - (mx * mx + my * my + mz * mz);
+    gbx = mx; gby = my; gbz = mz;
+    if (var < 0.5f) { Serial.println("# Jiroskop kalibre edildi"); break; }
+    Serial.println("# Kart oynadi, kalibrasyon tekrarlaniyor: sabit tut");
+  }
   yaw = 0;
   if (mpuRead(x, y, z, gx, gy, gz)) {               // başlangıç eğimi ve 1 g tabanı
     mBase = sqrtf(x * x + y * y + z * z); qFromAccel(x, y, z);
@@ -92,6 +98,9 @@ void imuStep(float dt) {
   if (yaw > 180) yaw -= 360; else if (yaw < -180) yaw += 360;
   mahony(gx * 0.0174533f, gy * 0.0174533f, gz * 0.0174533f, ax, ay, az, dt);
   float m = sqrtf(ax * ax + ay * ay + az * az);
+  static uint16_t calm = 0;                        // kart tamamen sabitken jiroskop sıfırını yavaşça güncelle: zamanla kayma olmaz
+  if (fabsf(gx) < 2 && fabsf(gy) < 2 && fabsf(gz) < 2 && fabsf(m - 1) < 0.06f) { if (calm < 1000) calm++; } else calm = 0;
+  if (calm > 200) { gbx += 0.002f * gx; gby += 0.002f * gy; gbz += 0.002f * gz; }
   mBase = mBase * 0.99875f + m * 0.00125f;          // yavaş taban: sensör 0,96 g da ölçse 0 hareket sayılır
   float dyn = fabsf(m - mBase);
   dynEma = dynEma * 0.975f + dyn * 0.025f;   // 200 Hz için eski 50 Hz zamanlaması
@@ -101,6 +110,18 @@ void imuStep(float dt) {
   if (dynEma * 250 < 3) stillMs += (uint32_t)(dt * 1000); else stillMs = 0;
 }
 int spm() { uint32_t now = millis(); int n = 0; for (int i = 0; i < 32; i++) if (stepT[i] && now - stepT[i] < 10000) n++; return n * 6; }
+
+/* ---------- IMU görevi: ESP32-S3'ün ayrı görevinde tam 200 Hz, Wi-Fi gecikmesinden etkilenmez ---------- */
+void imuTask(void*) {
+  TickType_t last = xTaskGetTickCount(); uint32_t tPrev = micros(), tRetry = 0;
+  for (;;) {
+    vTaskDelayUntil(&last, pdMS_TO_TICKS(5));
+    uint32_t t = micros(); float dt = (t - tPrev) * 1e-6f; tPrev = t;
+    if (!imuOk) { if (millis() - tRetry > 5000) { tRetry = millis(); imuOk = mpuInit(); if (imuOk) { Serial.println("# MPU6050 bulundu"); tPrev = micros(); } } continue; }
+    if (dt > 0.05f) dt = 0.05f;
+    imuStep(dt);
+  }
+}
 
 /* ---------- gönderme ---------- */
 bool usbJson = true;
@@ -156,18 +177,18 @@ void setup() {
   uint32_t t0 = millis(); while (!Serial && millis() - t0 < 1500) delay(10);
   Serial.println("# BioNova S3 basliyor (sadece MPU6050)");
   Wire.begin(I2C_SDA, I2C_SCL, 400000);   // sadece MPU: hızlı I2C
+  Serial.println("# Kalibrasyon: karti 1 sn sabit tut");
   imuOk = mpuInit();
   Serial.println(imuOk ? "# MPU6050 bulundu" : "# HATA: MPU6050 bulunamadi (adres 0x68). Kart 5 sn'de bir yeniden deneyecek.");
+  xTaskCreatePinnedToCore(imuTask, "imu", 4096, nullptr, 3, nullptr, 1);
   wifiStart();
   ws.begin(); ws.onEvent(onWs);
 }
 
 void loop() {
   ws.loop();
-  static uint32_t tImu = 0, tImuTx = 0, tLed = 0, tRetry = 0;
+  static uint32_t tImuTx = 0, tLed = 0;
   uint32_t now = millis();
-  if (!imuOk && now - tRetry > 5000) { tRetry = now; imuOk = mpuInit(); if (imuOk) { Serial.println("# MPU6050 bulundu"); tImu = now; } }
-  if (imuOk && now - tImu >= 5) { imuStep((now - tImu) / 1000.0f); tImu = now; }   // 200 Hz örnekleme
   if (imuOk && now - tImuTx >= 20) { tImuTx = now; sendImu(); }      // 50 Hz: 3B astronot gecikmesiz
   if (now - tLed >= (imuOk ? 1000 : 150)) { tLed = now; digitalWrite(LED_PIN, !digitalRead(LED_PIN)); }   // yavaş: çalışıyor, hızlı: MPU yok
   while (Serial.available()) {                    // panel USB'de 'J' gonderir; 'S' JSON'u susturur
