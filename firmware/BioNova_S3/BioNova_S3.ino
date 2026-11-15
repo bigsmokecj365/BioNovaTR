@@ -3,7 +3,7 @@
    MPU6050 hareket/duruş/adım/düşme. Nabız ve SpO2 sensörü (HW-605) arızalı
    olduğu için bu sürümde yok: panel nabız/SpO2/EKG'yi "Simülasyon" olarak gösterir.
    Panel protokolü: WebSocket ws://<ip>:81  ve  USB seri 115200 (JSON satırları)
-     {"type":"imu",...} 10 Hz  · eğim, hareket yoğunluğu, adım, düşme
+     {"type":"imu",...} 50 Hz  · eğim, hareket yoğunluğu, adım, düşme
    Ekranlar arası mesajlar ({"topic":...}) bağlı diğer sayfalara aktarılır.
 
    Kütüphane (Arduino IDE > Library Manager):
@@ -75,7 +75,7 @@ int spm() { uint32_t now = millis(); int n = 0; for (int i = 0; i < 32; i++) if 
 
 /* ---------- gönderme ---------- */
 bool usbJson = true;
-void out(const char* s) { ws.broadcastTXT(s); if (usbJson) Serial.println(s); }
+void out(const char* s) { ws.broadcastTXT(s); if (usbJson && Serial) Serial.println(s); }   // powerbankte USB yokken seriye yazma
 
 void sendImu() {
   int in = constrain((int)(dynEma * 250), 0, 100), sp = spm(), still = stillMs / 1000;
@@ -104,6 +104,15 @@ void wifiStart() {
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < 12000) { delay(300); Serial.print("."); }
   Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
+    // Sabit adres: ağ ne olursa olsun son hane hep .200 (ör. 192.168.43.200). Powerbankle her açılışta aynı adres.
+    IPAddress gw = WiFi.gatewayIP(), mask = WiFi.subnetMask(), fix(gw[0], gw[1], gw[2], 200);
+    WiFi.disconnect(); delay(100);
+    WiFi.config(fix, gw, mask, gw); WiFi.begin(WIFI_SSID, WIFI_PASS);
+    t0 = millis(); while (WiFi.status() != WL_CONNECTED && millis() - t0 < 10000) delay(200);
+    if (WiFi.status() != WL_CONNECTED) {          // sabit adres tutmazsa normal (DHCP) adrese dön
+      WiFi.disconnect(); delay(100); WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE); WiFi.begin(WIFI_SSID, WIFI_PASS);
+      t0 = millis(); while (WiFi.status() != WL_CONNECTED && millis() - t0 < 10000) delay(200);
+    }
     Serial.printf("# Panelde ESP32 adresi: %s  (veya bionova.local)\n", WiFi.localIP().toString().c_str());
   } else {
     WiFi.mode(WIFI_AP); WiFi.softAP(AP_SSID, AP_PASS);
@@ -130,7 +139,7 @@ void loop() {
   uint32_t now = millis();
   if (!imuOk && now - tRetry > 5000) { tRetry = now; imuOk = mpuInit(); if (imuOk) { Serial.println("# MPU6050 bulundu"); tImu = now; } }
   if (imuOk && now - tImu >= 20) { imuStep((now - tImu) / 1000.0f); tImu = now; }
-  if (imuOk && now - tImuTx >= 100) { tImuTx = now; sendImu(); }
+  if (imuOk && now - tImuTx >= 20) { tImuTx = now; sendImu(); }      // 50 Hz: 3B astronot gecikmesiz
   if (now - tLed >= (imuOk ? 1000 : 150)) { tLed = now; digitalWrite(LED_PIN, !digitalRead(LED_PIN)); }   // yavaş: çalışıyor, hızlı: MPU yok
   while (Serial.available()) {                    // panel USB'de 'J' gonderir; 'S' JSON'u susturur
     char c = Serial.read(); if (c == 'J') usbJson = true; else if (c == 'S') usbJson = false;

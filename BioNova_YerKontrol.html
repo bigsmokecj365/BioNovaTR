@@ -6011,8 +6011,11 @@ function loop(now){
   const p=curSnap();
   if(V.spin)V.yaw+=dt*14;
   rig.rotation.set(V.pitch*Math.PI/180,V.yaw*Math.PI/180,V.roll*Math.PI/180,'XYZ');
-  if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
-  poseG.rotation.set(pp*Math.PI/180*.6,0,-pr*Math.PI/180*.6);
+  const imuNow=role==='astro'&&imuLive();   // astronot ekranı: MPU açısı doğrudan, gecikmesiz
+  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;}
+  else if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
+  const psc=imuNow?1:.6;
+  poseG.rotation.set(pp*Math.PI/180*psc,0,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
@@ -7659,8 +7662,11 @@ function loop(now){
   const p=curSnap();
   if(V.spin)V.yaw+=dt*14;
   rig.rotation.set(V.pitch*Math.PI/180,V.yaw*Math.PI/180,V.roll*Math.PI/180,'XYZ');
-  if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
-  poseG.rotation.set(pp*Math.PI/180*.6,0,-pr*Math.PI/180*.6);
+  const imuNow=role==='astro'&&imuLive();   // astronot ekranı: MPU açısı doğrudan, gecikmesiz
+  if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-pp)*k;pr+=((+LIVE.mo.r||0)-pr)*k;}
+  else if(p){pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
+  const psc=imuNow?1:.6;
+  poseG.rotation.set(pp*Math.PI/180*psc,0,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
