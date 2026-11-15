@@ -5033,7 +5033,7 @@ function snap(){
   return{sid:SID,seq:++S.pkt,clk:clock(),dctx:S.dctx||'f',route:S.route,scen:S.scen,ex:!!SCEN[S.scen].exercise,irr:!S.live&&!!SCEN[S.scen].irregular,live:S.live?1:0,ppg:S.ppg?1:0,hb:Math.round(S.hb),cal:S.cal?S.cal.length:-1,
     v:Object.fromEntries(Object.entries(S.v).map(([k,x])=>[k,r1(x)])),lv:{...S.lv},ov:S.overall,iss:S.issues.slice(0,3).map(i=>[i.k,i.l]),
     nodes:Object.fromEntries(Object.entries(S.nodes).map(([k,n])=>[k,[n.on?1:0,n.bat,n.q,n.buf]])),
-    mo:{a:M.act,pl:M.place,p:Math.round(M.p),r:Math.round(M.r),y:Math.round(M.y),int:M.int,spm:Math.round(M.spm),st:Math.round(M.steps),still:Math.round(M.still),s:M.out.splice(0)},
+    mo:{qm:(role==='astro'&&imuLive()&&M.qm)?M.qm:null,a:M.act,pl:M.place,p:Math.round(M.p),r:Math.round(M.r),y:Math.round(M.y),int:M.int,spm:Math.round(M.spm),st:Math.round(M.steps),still:Math.round(M.still),s:M.out.splice(0)},
     dirs:Object.entries(S.active).map(([k,d])=>[k,d.code,d.lvl,d.at,d.ack?(d.auto?2:1):0,d.ackAt||'',d.tierDone?d.tierDone.k+'|'+d.tierDone.at:'']),
     rt:{n:RT_STATE.n,t:RT_STATE.t,o2:RT_STATE.spo2,ex:Math.round(RT_STATE.exSec/60)},
     msgs:S.msgs.slice(0,8).map(m=>[m.id,m.st,m.stAt]),
@@ -6018,7 +6018,7 @@ function poseQ(dt){const q=LIVE.mo.q;if(!IMU0q){IMU0q=q.slice();IMU0M=null;}cons
   const w=a[0]*q[0]+a[1]*q[1]+a[2]*q[2]+a[3]*q[3];let x=a[0]*q[1]-a[1]*q[0]-a[2]*q[3]+a[3]*q[2],
         y=a[0]*q[2]+a[1]*q[3]-a[2]*q[0]-a[3]*q[1],z=a[0]*q[3]-a[1]*q[2]+a[2]*q[1]-a[3]*q[0];
   if(IMU0M){const M=IMU0M,v=[x,y,z];[x,y,z]=M.map(m=>m[0]*v[0]+m[1]*v[1]+m[2]*v[2]);}
-  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();
+  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();M.qm=[QT.x,QT.y,QT.z,QT.w].map(v=>+v.toFixed(3));
   poseG.quaternion.slerp(QT,1-Math.exp(-dt*12));}
 const wrap180=a=>((a%360)+540)%360-180;
 function loop(now){
@@ -6030,7 +6030,8 @@ function loop(now){
   if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-IMU0.p-pp)*k;pr+=((+LIVE.mo.r||0)-IMU0.r-pr)*k;pyw+=wrap180((+LIVE.mo.y||0)-IMU0.y-pyw)*k;}
   else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  if(imuNow&&LIVE.mo.q)poseQ(dt);else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
+  if(imuNow&&LIVE.mo.q)poseQ(dt);else if(p&&p.mo&&Array.isArray(p.mo.qm)){M.qt2=M.qt2||poseG.quaternion.clone();M.qt2.set(...p.mo.qm).normalize();poseG.quaternion.slerp(M.qt2,1-Math.exp(-dt*5));}   // yer kontrol: astronotun gerçek duruşu (hat gecikmesiyle)
+  else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
@@ -6698,7 +6699,7 @@ function snap(){
   return{sid:SID,seq:++S.pkt,clk:clock(),dctx:S.dctx||'f',route:S.route,scen:S.scen,ex:!!SCEN[S.scen].exercise,irr:!S.live&&!!SCEN[S.scen].irregular,live:S.live?1:0,ppg:S.ppg?1:0,hb:Math.round(S.hb),cal:S.cal?S.cal.length:-1,
     v:Object.fromEntries(Object.entries(S.v).map(([k,x])=>[k,r1(x)])),lv:{...S.lv},ov:S.overall,iss:S.issues.slice(0,3).map(i=>[i.k,i.l]),
     nodes:Object.fromEntries(Object.entries(S.nodes).map(([k,n])=>[k,[n.on?1:0,n.bat,n.q,n.buf]])),
-    mo:{a:M.act,pl:M.place,p:Math.round(M.p),r:Math.round(M.r),y:Math.round(M.y),int:M.int,spm:Math.round(M.spm),st:Math.round(M.steps),still:Math.round(M.still),s:M.out.splice(0)},
+    mo:{qm:(role==='astro'&&imuLive()&&M.qm)?M.qm:null,a:M.act,pl:M.place,p:Math.round(M.p),r:Math.round(M.r),y:Math.round(M.y),int:M.int,spm:Math.round(M.spm),st:Math.round(M.steps),still:Math.round(M.still),s:M.out.splice(0)},
     dirs:Object.entries(S.active).map(([k,d])=>[k,d.code,d.lvl,d.at,d.ack?(d.auto?2:1):0,d.ackAt||'',d.tierDone?d.tierDone.k+'|'+d.tierDone.at:'']),
     rt:{n:RT_STATE.n,t:RT_STATE.t,o2:RT_STATE.spo2,ex:Math.round(RT_STATE.exSec/60)},
     msgs:S.msgs.slice(0,8).map(m=>[m.id,m.st,m.stAt]),
@@ -7683,7 +7684,7 @@ function poseQ(dt){const q=LIVE.mo.q;if(!IMU0q){IMU0q=q.slice();IMU0M=null;}cons
   const w=a[0]*q[0]+a[1]*q[1]+a[2]*q[2]+a[3]*q[3];let x=a[0]*q[1]-a[1]*q[0]-a[2]*q[3]+a[3]*q[2],
         y=a[0]*q[2]+a[1]*q[3]-a[2]*q[0]-a[3]*q[1],z=a[0]*q[3]-a[1]*q[2]+a[2]*q[1]-a[3]*q[0];
   if(IMU0M){const M=IMU0M,v=[x,y,z];[x,y,z]=M.map(m=>m[0]*v[0]+m[1]*v[1]+m[2]*v[2]);}
-  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();
+  QT=QT||poseG.quaternion.clone();QT.set(x,y,z,w).normalize();M.qm=[QT.x,QT.y,QT.z,QT.w].map(v=>+v.toFixed(3));
   poseG.quaternion.slerp(QT,1-Math.exp(-dt*12));}
 const wrap180=a=>((a%360)+540)%360-180;
 function loop(now){
@@ -7695,7 +7696,8 @@ function loop(now){
   if(imuNow){const k=1-Math.exp(-dt*30);pp+=((+LIVE.mo.p||0)-IMU0.p-pp)*k;pr+=((+LIVE.mo.r||0)-IMU0.r-pr)*k;pyw+=wrap180((+LIVE.mo.y||0)-IMU0.y-pyw)*k;}
   else if(p){pyw*=.92;pp+=((p.mo.p||0)-pp)*.08;pr+=((p.mo.r||0)-pr)*.08;}
   const psc=imuNow?1:.6;
-  if(imuNow&&LIVE.mo.q)poseQ(dt);else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
+  if(imuNow&&LIVE.mo.q)poseQ(dt);else if(p&&p.mo&&Array.isArray(p.mo.qm)){M.qt2=M.qt2||poseG.quaternion.clone();M.qt2.set(...p.mo.qm).normalize();poseG.quaternion.slerp(M.qt2,1-Math.exp(-dt*5));}   // yer kontrol: astronotun gerçek duruşu (hat gecikmesiyle)
+  else poseG.rotation.set(pp*Math.PI/180*psc,pyw*Math.PI/180,-pr*Math.PI/180*psc);
   const bob=p&&p.mo.a==='kosu'?Math.abs(Math.sin(now/1000*Math.PI*2.6))*.05:0;
   body.position.y=Math.sin(now/1400)*.035+bob;
   anatFrame(now,p);
@@ -8032,13 +8034,17 @@ requestAnimationFrame(loop);
   var en=window.bnLang==='en';
   var T=function(tr,e){return en?e:tr;};
   var ROLE=window.BN_ROLE||null;
-  var API=window.BN_API||{};
-  if(ROLE&&API.setRole){
-    API.setRole(ROLE);
-    var rs=document.querySelector('.roles');if(rs)rs.style.display='none';
-    var db=document.getElementById('demo-btn');if(db)db.style.display='none';
-    document.title='BioNova · '+(ROLE==='ground'?T('Yer kontrol','Ground control'):T('Astronot','Astronaut'));
-  }
+  var API=null;   // uygulama kodu bu betikten sonra yüklenebilir: hazır olana kadar bekle
+  function withApi(cb){if(window.BN_API){API=window.BN_API;cb(API);}else setTimeout(function(){withApi(cb);},100);}
+  withApi(function(A){
+    if(ROLE&&A.setRole){
+      A.setRole(ROLE);
+      var rs=document.querySelector('.roles');if(rs)rs.style.display='none';
+      var db=document.getElementById('demo-btn');if(db)db.style.display='none';
+      document.title='BioNova · '+(ROLE==='ground'?T('Yer kontrol','Ground control'):T('Astronot','Astronaut'));
+    }
+    if(A.wrapSend)A.wrapSend(function(topic,data){if(open&&ws)ws.send(JSON.stringify({topic:topic,data:data}));});
+  });
   var KEY='bionova-server',url='';
   var served=/^https?:$/.test(location.protocol);
   try{url=new URLSearchParams(location.search).get('server')||(served?(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws':'')||localStorage.getItem(KEY)||'';}catch(e){}
@@ -8060,9 +8066,8 @@ requestAnimationFrame(loop);
     ws.onclose=function(){if(ws!==me)return;open=false;paint();retry=setTimeout(connect,3000);};
     ws.onerror=function(){};
     ws.onmessage=function(e){var d;try{d=JSON.parse(e.data);}catch(x){return;}
-      if(d&&d.topic&&API.recv)API.recv(d.topic,d.data);};
+      if(d&&d.topic&&API&&API.recv)API.recv(d.topic,d.data);};
   }
-  if(API.wrapSend)API.wrapSend(function(topic,data){if(open)ws.send(JSON.stringify({topic:topic,data:data}));});
   pill.addEventListener('click',function(){
     var v=prompt(T('Sunucu adresi (ör. ws://192.168.1.20:8765 veya wss://alanadi/bionova). Boş bırakırsan bağlantı kapanır.',
                    'Server address (e.g. ws://192.168.1.20:8765 or wss://domain/bionova). Leave empty to disconnect.'),url);
